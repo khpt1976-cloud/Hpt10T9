@@ -2725,6 +2725,11 @@ export default function ReportEditorPage() {
           const pageContent = pagesContent[pageNum] || ''
           const isImagePage = !!imagePagesConfig[pageNum]
           
+          // Skip empty pages (no content and not image page)
+          if (!pageContent && !isImagePage) {
+            continue
+          }
+          
           if (isImagePage) {
             // Render image page
             const config = imagePagesConfig[pageNum]
@@ -2733,16 +2738,9 @@ export default function ReportEditorPage() {
             
             allPagesContent += `
               <div class="print-page ${pageNum > 1 ? 'page-break' : ''}">
-                <div class="page-header">
-                  <div class="header-date">${new Date().toLocaleDateString('vi-VN')}</div>
-                  <div class="header-title">In nhật ký - Nhật ký thi công</div>
-                  <div class="header-page">${pageNum}/${totalPages}</div>
-                </div>
-                
                 <div class="page-content">
                   <div class="content-header">
-                    <h2 class="report-title">Báo cáo thi công</h2>
-                    <p class="report-page">Trang ${pageNum}</p>
+                    <h1 class="document-title">${reportName}</h1>
                     <h3 class="section-title">Hình ảnh thi công</h3>
                   </div>
                   
@@ -2753,36 +2751,44 @@ export default function ReportEditorPage() {
                           <img src="${imageUrl}" alt="Ảnh ${index + 1}" class="construction-image" />
                         ` : `
                           <div class="empty-image-slot">
-                            <span>Click để thay ảnh</span>
+                            <span>Chưa có ảnh</span>
                           </div>
                         `}
                       </div>
                     `).join('')}
-                  </div>
-                  
-                  <div class="page-footer">
-                    Trang ${pageNum} - ${images.filter(img => img).length} ảnh / ${images.length} vị trí
                   </div>
                 </div>
               </div>
             `
           } else {
             // Render text page
-            const content = pageContent || 'Không có nội dung'
+            let content = pageContent || ''
+            
+            // ✅ FIX: Clean and sanitize HTML content to prevent text mixing when images are present
+            if (content && content.includes('<img')) {
+              // Create a temporary DOM element to properly parse and clean the HTML
+              const tempDiv = document.createElement('div')
+              tempDiv.innerHTML = content
+              
+              // Process images to ensure they don't break text flow
+              const images = tempDiv.querySelectorAll('img')
+              images.forEach(img => {
+                // Wrap images in proper containers to prevent text mixing
+                const wrapper = document.createElement('div')
+                wrapper.style.cssText = 'margin: 10px 0; text-align: center; clear: both;'
+                wrapper.appendChild(img.cloneNode(true))
+                img.parentNode?.replaceChild(wrapper, img)
+              })
+              
+              // Get the cleaned HTML
+              content = tempDiv.innerHTML
+            }
+            
             allPagesContent += `
               <div class="print-page ${pageNum > 1 ? 'page-break' : ''}">
-                <div class="page-header">
-                  <div class="header-date">${new Date().toLocaleDateString('vi-VN')}</div>
-                  <div class="header-title">In nhật ký - Nhật ký thi công</div>
-                  <div class="header-page">${pageNum}/${totalPages}</div>
-                </div>
-                
                 <div class="page-content">
                   <div class="content-header">
                     <h1 class="document-title">${reportName}</h1>
-                    <p class="document-info">
-                      <strong>Trang ${pageNum}</strong> | ${new Date().toLocaleDateString('vi-VN')}
-                    </p>
                   </div>
                   
                   <div class="document-content">
@@ -2798,7 +2804,7 @@ export default function ReportEditorPage() {
           <!DOCTYPE html>
           <html>
           <head>
-            <title>In nhật ký - ${reportName}</title>
+            <title>${reportName}</title>
             <meta charset="UTF-8">
             <style>
               * {
@@ -2817,7 +2823,14 @@ export default function ReportEditorPage() {
               
               @page {
                 size: A4;
-                margin: 20mm 15mm;
+                margin: 0;
+              }
+              
+              @media print {
+                body {
+                  margin: 0;
+                  padding: 20mm 15mm;
+                }
               }
               
               .print-page {
@@ -2832,25 +2845,10 @@ export default function ReportEditorPage() {
                 page-break-before: always;
               }
               
-              .page-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 8px 0;
-                border-bottom: 1px solid #ddd;
-                margin-bottom: 20px;
-                font-size: 10pt;
-                color: #666;
-              }
-              
-              .header-title {
-                font-weight: bold;
-                color: #000;
-              }
-              
               .page-content {
                 flex: 1;
                 padding: 0;
+                margin-top: 60px;
               }
               
               .content-header {
@@ -2947,6 +2945,22 @@ export default function ReportEditorPage() {
               
               .document-content li {
                 margin-bottom: 5px;
+              }
+              
+              /* ✅ FIX: Proper styling for images in document content */
+              .document-content img {
+                max-width: 100%;
+                height: auto;
+                display: block;
+                margin: 15px auto;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+              
+              .document-content div {
+                margin: 10px 0;
+                clear: both;
               }
               
               @media print {
@@ -3794,16 +3808,6 @@ export default function ReportEditorPage() {
           <Button onClick={handlePrint} variant="ghost" size="sm" className="text-white hover:bg-blue-700">
             <Printer className="w-4 h-4 mr-2" />
             In tài liệu
-          </Button>
-          
-          <Button onClick={handleExportPDF} variant="ghost" size="sm" className="text-white hover:bg-blue-700">
-            <Download className="w-4 h-4 mr-2" />
-            Xuất PDF (Cũ)
-          </Button>
-          
-          <Button onClick={handleExportPDFNew} variant="ghost" size="sm" className="text-white hover:bg-green-700 bg-green-700/20">
-            <Download className="w-4 h-4 mr-2" />
-            Xuất PDF (Mới)
           </Button>
 
           {/* 4 nút quản lý file mới */}
