@@ -2794,10 +2794,14 @@ export default function ReportEditorPage() {
   }
 
   const handlePrint = () => {
+    console.log("🖨️ [PRINT DEBUG] handlePrint được gọi - mở modal preview!")
     setShowPrintPreview(true)
   }
 
   const handleActualPrint = () => {
+    console.log("🖨️ [PRINT DEBUG] handleActualPrint được gọi!")
+    console.log("🖨️ [PRINT DEBUG] imagePagesConfig:", imagePagesConfig)
+    
     // Tạo cửa sổ in mới với chỉ nội dung cần in
     const printWindow = window.open('', '_blank', 'width=800,height=600')
     
@@ -2863,23 +2867,33 @@ export default function ReportEditorPage() {
               
               .image-grid {
                 display: grid !important;
-                gap: 10px;
-                margin: 20px 0;
+                gap: 10mm !important;
+                margin: 20px auto !important;
+                max-width: 160mm !important;
+                width: 100% !important;
+                justify-content: center !important;
+                align-content: start !important;
               }
               
               .image-item {
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                overflow: hidden;
-                page-break-inside: avoid;
-                margin-bottom: 10px;
+                width: 75mm !important;
+                height: 75mm !important;
+                border: 2px solid #ddd !important;
+                border-radius: 8px !important;
+                overflow: hidden !important;
+                page-break-inside: avoid !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                background: #f9f9f9 !important;
+                margin-bottom: 0 !important;
               }
               
               .image-item img {
-                width: 100%;
-                height: auto;
-                max-height: 200px;
-                object-fit: contain;
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
+                border-radius: 6px !important;
               }
               
               * {
@@ -2914,22 +2928,32 @@ export default function ReportEditorPage() {
               
               .image-grid {
                 display: grid;
-                gap: 10px;
-                margin: 20px 0;
+                gap: 10mm;
+                margin: 20px auto;
+                max-width: 160mm;
+                width: 100%;
+                justify-content: center;
+                align-content: start;
               }
               
               .image-item {
-                border: 1px solid #ddd;
-                border-radius: 4px;
+                width: 75mm;
+                height: 75mm;
+                border: 2px solid #ddd;
+                border-radius: 8px;
                 overflow: hidden;
-                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #f9f9f9;
+                margin-bottom: 0;
               }
               
               .image-item img {
                 width: 100%;
-                height: auto;
-                max-height: 200px;
-                object-fit: contain;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 6px;
               }
             }
           </style>
@@ -2953,18 +2977,35 @@ export default function ReportEditorPage() {
         `
         
         if (hasImageConfig) {
-          // Trang ảnh
-          printHTML += '<div class="image-grid">'
+          // Trang ảnh - Render tất cả slots để đảm bảo grid 2x2
           const images = imagePagesConfig[pageNum]?.images || []
-          images.forEach((imageUrl, slotIndex) => {
+          const imagesPerPage = imagePagesConfig[pageNum]?.imagesPerPage || 4
+          const imagesPerRow = imagePagesConfig[pageNum]?.imagesPerRow || 2
+          
+          console.log(`🖨️ [PRINT DEBUG] Trang ${pageNum} - imagesPerPage: ${imagesPerPage}, imagesPerRow: ${imagesPerRow}`)
+          
+          printHTML += `<div class="image-grid" style="grid-template-columns: repeat(${imagesPerRow}, 1fr) !important;">`
+          
+          // Render tất cả slots (kể cả trống) để đảm bảo grid layout
+          for (let slotIndex = 0; slotIndex < imagesPerPage; slotIndex++) {
+            const imageUrl = images[slotIndex]
             if (imageUrl) {
               printHTML += `
                 <div class="image-item">
                   <img src="${imageUrl}" alt="Ảnh ${slotIndex + 1}" />
                 </div>
               `
+            } else {
+              // Slot trống - vẫn cần render để giữ grid layout
+              printHTML += `
+                <div class="image-item">
+                  <div style="display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 12px;">
+                    Ảnh ${slotIndex + 1}
+                  </div>
+                </div>
+              `
             }
-          })
+          }
           printHTML += '</div>'
         } else {
           // Trang text
@@ -3706,22 +3747,32 @@ export default function ReportEditorPage() {
             
             .image-grid {
               display: grid !important;
-              gap: 10px;
-              margin: 20px 0;
+              gap: 10mm !important;
+              margin: 20px auto !important;
+              max-width: 160mm !important;
+              width: 100% !important;
+              justify-content: center !important;
+              align-content: start !important;
             }
             
             .image-item {
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              overflow: hidden;
-              page-break-inside: avoid;
+              width: 75mm !important;
+              height: 75mm !important;
+              border: 2px solid #ddd !important;
+              border-radius: 8px !important;
+              overflow: hidden !important;
+              page-break-inside: avoid !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              background: #f9f9f9 !important;
             }
             
             .image-item img {
-              width: 100%;
-              height: auto;
-              max-height: 80mm;
-              object-fit: contain;
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: cover !important;
+              border-radius: 6px !important;
             }
             
             * {
@@ -4364,7 +4415,10 @@ export default function ReportEditorPage() {
                   <Printer className="w-4 h-4 mr-2" />
                   In tài liệu
                 </Button>
-                <Button onClick={() => setShowPrintPreview(false)} variant="outline">
+                <Button onClick={() => {
+                  console.log("🖨️ [PRINT DEBUG] Nút Đóng modal được bấm!")
+                  setShowPrintPreview(false)
+                }} variant="outline">
                   Đóng
                 </Button>
               </div>
@@ -4389,22 +4443,52 @@ export default function ReportEditorPage() {
                       {/* Nội dung trang */}
                       <div className="page-content">
                         {hasImageConfig ? (
-                          /* Trang ảnh */
-                          <div className="image-grid">
-                            {(imagePagesConfig[pageNum]?.images || []).map((imageUrl, slotIndex) => {
-                              if (!imageUrl) return null
+                          /* Trang ảnh - Hiển thị grid 2x2 */
+                          <div className="image-grid" style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(2, 1fr)',
+                            gap: '10px',
+                            maxWidth: '400px',
+                            margin: '0 auto'
+                          }}>
+                            {Array.from({ length: imagePagesConfig[pageNum]?.imagesPerPage || 4 }, (_, slotIndex) => {
+                              const imageUrl = (imagePagesConfig[pageNum]?.images || [])[slotIndex]
                               return (
-                                <div key={slotIndex} className="image-item mb-4">
-                                  <img 
-                                    src={imageUrl} 
-                                    alt={`Ảnh ${slotIndex + 1}`}
-                                    className="max-w-full h-auto border"
-                                    style={{ maxHeight: '200px' }}
-                                    onError={(e) => {
-                                      console.error('Image load error:', imageUrl)
-                                      e.currentTarget.style.display = 'none'
-                                    }}
-                                  />
+                                <div key={slotIndex} className="image-item" style={{
+                                  width: '180px',
+                                  height: '180px',
+                                  border: '2px solid #ddd',
+                                  borderRadius: '8px',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: '#f9f9f9'
+                                }}>
+                                  {imageUrl ? (
+                                    <img 
+                                      src={imageUrl} 
+                                      alt={`Ảnh ${slotIndex + 1}`}
+                                      style={{ 
+                                        width: '100%', 
+                                        height: '100%', 
+                                        objectFit: 'cover',
+                                        borderRadius: '6px'
+                                      }}
+                                      onError={(e) => {
+                                        console.error('Image load error:', imageUrl)
+                                        e.currentTarget.style.display = 'none'
+                                      }}
+                                    />
+                                  ) : (
+                                    <div style={{ 
+                                      color: '#ccc', 
+                                      fontSize: '12px',
+                                      textAlign: 'center'
+                                    }}>
+                                      Ảnh {slotIndex + 1}
+                                    </div>
+                                  )}
                                 </div>
                               )
                             })}
